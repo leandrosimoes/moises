@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "pretty": true,
+        "sourceMap": true,
+        "target": "ESNext",
+        "resolveJsonModule": true,
+        "outDir": "./dist",
+        "allowJs": true,
+        "forceConsistentCasingInFileNames": true,
+        "importHelpers": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "baseUrl": ".",
+        "esModuleInterop": true,
+        "types": [
+            "node"
+        ]
+    },
+    "include": [
+        "**/*.ts",
+        "**/*.js",
+        "./typings/yargs-helpers.d.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
