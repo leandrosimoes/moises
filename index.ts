@@ -32,6 +32,7 @@ export type ProcessFolderOptions = {
         report: any
     ) => Promise<void>
     onLog?: typeof console.log
+    onError?: typeof console.error
 }
 
 export type ProcessFileOptions = {
@@ -209,10 +210,12 @@ function processFolder({
     jobMonitorInterval,
     onProgress,
     onLog,
+    onError,
 }: ProcessFolderOptions): Promise<DownloadResult[]> {
     const results: DownloadResult[] = []
 
     if (onLog) console.log = onLog
+    if (onError) console.error = onError
 
     // This is needed because glob doesn't work with Windows paths
     if (process.platform === 'win32') {
@@ -250,7 +253,7 @@ function processFolder({
                 })
                 await reportProgress(file, 'SUCCEEDED')
             } catch (error) {
-                console.log(error)
+                console.error(error)
                 await reportProgress(file, 'FAILED')
             }
         }
@@ -260,7 +263,7 @@ function processFolder({
                 await reportProgress(file, 'PENDING')
                 queue.add(async () => await queueListener(file))
             } catch (error) {
-                console.log(error)
+                console.error(error)
             }
         }
 
@@ -289,7 +292,7 @@ function processFolder({
                     await onProgress(file, status, reportBreakdown)
                 }
             } catch (error) {
-                console.log(error)
+                console.error(error)
             }
         }
 
