@@ -1,4 +1,3 @@
-import chokidar from 'chokidar'
 import { glob } from 'fast-glob'
 import fetch from 'node-fetch'
 import fs from 'node:fs'
@@ -25,7 +24,6 @@ export type ProcessFolderOptions = {
     inputFolder: string
     outputFolder: string
     maxConcurrencyNumber?: number
-    shouldWatch?: boolean
     abortSignal?: AbortSignal
     jobMonitorInterval?: number
     onProgress?: (
@@ -208,12 +206,13 @@ function processFolder({
     outputFolder,
     maxConcurrencyNumber = 5,
     abortSignal,
-    shouldWatch,
     jobMonitorInterval,
     onProgress,
     onLog,
 }: ProcessFolderOptions): Promise<DownloadResult[]> {
     const results: DownloadResult[] = []
+
+    if (onLog) console.log = onLog
 
     // This is needed because glob doesn't work with Windows paths
     if (process.platform === 'win32') {
@@ -222,10 +221,6 @@ function processFolder({
     }
 
     return new Promise(async (resolve) => {
-        let watcher: chokidar.FSWatcher | undefined
-
-        if (onLog) console.log = onLog
-
         console.log(`Processing folder: ${inputFolder} -> ${outputFolder} ...`)
 
         const queue = new PQueue({ concurrency: maxConcurrencyNumber })
@@ -233,10 +228,6 @@ function processFolder({
 
         if (abortSignal) {
             abortSignal.addEventListener('abort', async () => {
-                if (shouldWatch && watcher) {
-                    watcher.close()
-                }
-
                 queue.clear()
                 await queue.onIdle()
 
@@ -303,22 +294,15 @@ function processFolder({
         }
 
         const globOptions = `${inputFolder}/*.@(mp3|wav|m4a)`
+        const files = await glob(globOptions, {})
 
-        if (shouldWatch) {
-            watcher = chokidar
-                .watch(globOptions)
-                .on('add', async (file: string) => await addToQueue(file))
-        } else {
-            const files = await glob(globOptions, {})
-
-            for (const file of files) {
-                await addToQueue(file)
-            }
-
-            await queue.onIdle()
-
-            resolve(results)
+        for (const file of files) {
+            await addToQueue(file)
         }
+
+        await queue.onIdle()
+
+        resolve(results)
     })
 }
 

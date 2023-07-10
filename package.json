@@ -13,14 +13,21 @@
     "prepare": "husky install"
   },
   "repository": {
-      "type": "git",
-      "url": "git+https://github.com/leandrosimoes/moises.git",
-      "baseUrl": "https://github.com/leandrosimoes/moises"
+    "type": "git",
+    "url": "git+https://github.com/leandrosimoes/moises.git",
+    "baseUrl": "https://github.com/leandrosimoes/moises"
   },
-  "keywords": ["moises", "moisesai", "ai", "track", "separation", "music"],
+  "keywords": [
+    "moises",
+    "moisesai",
+    "ai",
+    "track",
+    "separation",
+    "music"
+  ],
   "author": {
-      "name": "Leandro Simões",
-      "email": "leandro.simoes@outlook.com"
+    "name": "Leandro Simões",
+    "email": "leandro.simoes@outlook.com"
   },
   "license": "MIT",
   "licenseFilename": "LICENSE",
@@ -48,7 +55,6 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "chokidar": "^3.5.3",
     "fast-glob": "^3.3.0",
     "node-fetch": "^3.3.1",
     "p-queue": "^7.3.4"
