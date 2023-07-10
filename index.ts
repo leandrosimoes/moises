@@ -31,8 +31,8 @@ export type ProcessFolderOptions = {
         status: JobStatus | ProccessStatus,
         report: any
     ) => Promise<void>
-    onLog?: typeof console.log
-    onError?: typeof console.error
+    onLog?(message: string): void
+    onError?(message: string): void
 }
 
 export type ProcessFileOptions = {
@@ -109,8 +109,6 @@ async function apiCall({ method, path, data = {}, apiKey }: ApiCallOptions) {
         Authorization: apiKey,
     }
 
-    console.log({ url, headers })
-
     const response = await fetch(url, {
         method,
         headers,
@@ -118,11 +116,8 @@ async function apiCall({ method, path, data = {}, apiKey }: ApiCallOptions) {
     })
 
     if (response.status !== 200) {
-        console.log(response)
         throw new Error(response.statusText)
     }
-
-    console.log(response)
 
     const json = await response.json()
     return json as APICallResponse
