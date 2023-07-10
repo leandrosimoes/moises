@@ -14,10 +14,7 @@
         "tsconfigRootDir": "."
     },
     "rules": {
-        "comma-dangle": [
-            "error",
-            "always-multiline"     
-        ],
+        "comma-dangle": "off",
         "unused-imports/no-unused-imports": "error",
         "unused-imports/no-unused-vars": [
             "warn",
@@ -46,6 +43,17 @@
                     "ignoreCase": true
                 }
             }
+        ],
+        "prettier/prettier": [
+            "error",
+            {
+                "trailingComma": "es5",
+                "tabWidth": 4,
+                "semi": false,
+                "singleQuote": true,
+                "endOfLine": "auto"
+            }
+            
         ]
     },
     "plugins": [

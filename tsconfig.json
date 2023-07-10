@@ -1,7 +1,8 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "moduleResolution": "node",
+        "module": "Node16",
+        "moduleResolution": "node16",
+        "declaration": true,
         "pretty": true,
         "sourceMap": true,
         "target": "ESNext",
@@ -19,11 +20,15 @@
         ]
     },
     "include": [
-        "**/*.ts",
-        "**/*.js",
-        "./typings/yargs-helpers.d.ts"
+        "index.ts",
+        "src/**/*.ts",
     ],
     "exclude": [
-        "node_modules"
-    ]
+        "node_modules",
+    ],
+    "ts-node": {
+        "transpileOnly": true,
+        "files": true,
+        "experimentalResolver": true,
+    }
 }

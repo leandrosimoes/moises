@@ -1,2 +1,1 @@
-export const APP_PATH = process.cwd()
-export const DEFAULT_DELAY_TIME = 0.5 * 1000 // 500 miliseconds
+export const MOISES_API_BASE_URL = 'https://developer-api.moises.ai'

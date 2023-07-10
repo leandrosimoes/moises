@@ -35,14 +35,8 @@ body:
     required: false
 - type: input
   attributes:
-    label: Library version that you are testing
-    description: E.g. v4.0.2
-  validations:
-    required: true
-- type: input
-  attributes:
-    label: Device
-    description: E.g. Galaxy S20
+    label: Package version that you are testing
+    description: E.g. v1.0.0
   validations:
     required: true
 - type: input

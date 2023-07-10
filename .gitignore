@@ -334,3 +334,6 @@ ASALocalRun/
 [Oo]utput/
 [Aa]nswers.json
 [Dd]ist/
+
+# My stuff
+.DS_Store
