@@ -1,7 +1,7 @@
 import { mkdir } from 'fs/promises'
 import { dirname } from 'path'
 
-export function sleep(time = 100) {
+export function sleep(time = 1000) {
     let timeout: any
     return new Promise<void>((resolve) => {
         timeout = setTimeout(() => {

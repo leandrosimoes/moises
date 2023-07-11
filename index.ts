@@ -1,4 +1,4 @@
-import { glob } from 'fast-glob'
+import { glob } from 'glob'
 import fetch from 'node-fetch'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -11,7 +11,7 @@ import {
     ensureFolderExists,
 } from './src/utils/index.js'
 
-export type ProccessStatus =
+export type ProcessStatus =
     | 'PENDING'
     | 'PROCESSING'
     | 'SUCCEEDED'
@@ -28,11 +28,11 @@ export type ProcessFolderOptions = {
     jobMonitorInterval?: number
     onProgress?: (
         file: string,
-        status: JobStatus | ProccessStatus,
+        status: JobStatus | ProcessStatus,
         report: any
     ) => Promise<void>
-    onLog?(message: string): void
-    onError?(message: string): void
+    onLog?(message: string): Promise<void>
+    onError?(message: string): Promise<void>
 }
 
 export type ProcessFileOptions = {
@@ -41,6 +41,13 @@ export type ProcessFileOptions = {
     filePath: string
     outputFolder: string
     jobMonitorInterval?: number
+    onProgress?: (
+        file: string,
+        status: JobStatus | ProcessStatus,
+        report: any
+    ) => Promise<void>
+    onLog?(message: string): Promise<void>
+    onError?(message: string): Promise<void>
 }
 
 export type JobStatus =
@@ -90,7 +97,7 @@ type ReportBreakdown = {
     STARTED: string[]
 }
 
-type DownloadResult = {
+export type DownloadResult = {
     [key: string]: string
 }
 
@@ -99,6 +106,31 @@ type ApiCallOptions = {
     path: string
     data?: any
     apiKey: string
+}
+
+let onLogInternal = (message: string): Promise<void> => {
+    return new Promise((resolve) => {
+        console.log(message)
+        resolve()
+    })
+}
+
+let onErrorInternal = (message: string): Promise<void> => {
+    return new Promise((resolve) => {
+        console.error(message)
+        resolve()
+    })
+}
+
+let onProgressInternal = (
+    file: string,
+    status: JobStatus | ProcessStatus,
+    reportBreakdown: ReportBreakdown
+): Promise<void> => {
+    return new Promise((resolve) => {
+        console.log(file, status, reportBreakdown)
+        resolve()
+    })
 }
 
 async function apiCall({ method, path, data = {}, apiKey }: ApiCallOptions) {
@@ -124,7 +156,7 @@ async function apiCall({ method, path, data = {}, apiKey }: ApiCallOptions) {
 }
 
 async function uploadFile(fileLocation: string, apiKey: string) {
-    console.log(`Uploading file ${fileLocation} ...`)
+    await onLogInternal(`Uploading file ${fileLocation} ...`)
 
     const { uploadUrl, downloadUrl } = await apiCall({
         method: 'GET',
@@ -141,7 +173,7 @@ async function uploadFile(fileLocation: string, apiKey: string) {
 }
 
 async function downloadFile(url: string, fileDestination: string) {
-    console.log(`Downloading file ${url} ...`)
+    await onLogInternal(`Downloading file ${url} ...`)
 
     await ensureFolderExists(fileDestination)
 
@@ -169,16 +201,102 @@ async function addJob(
     return id
 }
 
-async function processFile({
+const report: Report = {}
+
+async function reportProgress(file: string, status: JobStatus) {
+    try {
+        await onLogInternal(`Progress: File ${file} -> ${status}`)
+
+        report[file] = { status }
+
+        const reportBreakdown: ReportBreakdown = {
+            PENDING: [],
+            PROCESSING: [],
+            SUCCEEDED: [],
+            FAILED: [],
+            DELETED: [],
+            QUEUED: [],
+            CANCELLED: [],
+            STARTED: [],
+        }
+
+        for (const filePath in report) {
+            reportBreakdown[report[filePath].status].push(filePath)
+        }
+
+        await onProgressInternal(file, status, reportBreakdown)
+    } catch (error: any) {
+        await onErrorInternal(error)
+    }
+}
+
+async function queueListener(
+    apiKey: string,
+    workflowId: string,
+    file: string,
+    outputFolder: string,
+    jobMonitorInterval: number
+) {
+    try {
+        const fileName = path.basename(file).split('.').shift()
+        await processFile({
+            apiKey,
+            workflowId: workflowId,
+            filePath: file,
+            outputFolder: `${outputFolder}/${fileName}`,
+            jobMonitorInterval,
+        })
+    } catch (error: any) {
+        await onErrorInternal(error)
+        await reportProgress(file, 'FAILED')
+    }
+}
+
+async function addToQueue(
+    apiKey: string,
+    workflowId: string,
+    queue: PQueue,
+    file: string,
+    outputFolder: string,
+    jobMonitorInterval: number
+) {
+    try {
+        await reportProgress(file, 'PENDING')
+        queue.add(
+            async () =>
+                await queueListener(
+                    apiKey,
+                    workflowId,
+                    file,
+                    outputFolder,
+                    jobMonitorInterval
+                )
+        )
+    } catch (error: any) {
+        await onErrorInternal(error)
+    }
+}
+
+export async function processFile({
     apiKey,
     workflowId,
     filePath,
     outputFolder,
     jobMonitorInterval,
+    onProgress,
+    onLog,
+    onError,
 }: ProcessFileOptions) {
     if (!apiKey) throw new Error('API Key is required')
+    if (!workflowId) throw new Error('Workflow ID is required')
 
-    console.log(`Processing file: ${filePath} ...`)
+    if (onProgress) onProgressInternal = onProgress
+    if (onLog) onLogInternal = onLog
+    if (onError) onErrorInternal = onError
+
+    await reportProgress(filePath, 'PROCESSING')
+
+    await onLogInternal(`Processing file: ${filePath} ...`)
 
     const name = path.basename(filePath).split('.').shift() ?? 'output'
     const inputUrl = await uploadFile(filePath, apiKey)
@@ -192,25 +310,28 @@ async function processFile({
 
     await deleteJob(apiKey, jobId)
 
+    await reportProgress(filePath, 'SUCCEEDED')
+
     return result
 }
 
-function processFolder({
+export function processFolder({
     apiKey,
     workflowId,
     inputFolder,
     outputFolder,
     maxConcurrencyNumber = 5,
     abortSignal,
-    jobMonitorInterval,
+    jobMonitorInterval = 1000,
     onProgress,
     onLog,
     onError,
 }: ProcessFolderOptions): Promise<DownloadResult[]> {
     const results: DownloadResult[] = []
 
-    if (onLog) console.log = onLog
-    if (onError) console.error = onError
+    if (onProgress) onProgressInternal = onProgress
+    if (onLog) onLogInternal = onLog
+    if (onError) onErrorInternal = onError
 
     // This is needed because glob doesn't work with Windows paths
     if (process.platform === 'win32') {
@@ -219,83 +340,36 @@ function processFolder({
     }
 
     return new Promise(async (resolve) => {
-        console.log(`Processing folder: ${inputFolder} -> ${outputFolder} ...`)
+        await onLogInternal(
+            `Processing folder: ${inputFolder} -> ${outputFolder} ...`
+        )
 
         const queue = new PQueue({ concurrency: maxConcurrencyNumber })
-        const report: Report = {}
 
         if (abortSignal) {
             abortSignal.addEventListener('abort', async () => {
                 queue.clear()
+
                 await queue.onIdle()
 
-                console.log(`Queue aborted`)
+                await onLogInternal(`Queue aborted`)
 
                 resolve(results)
             })
-        }
-
-        async function queueListener(file: string) {
-            try {
-                await reportProgress(file, 'PROCESSING')
-                const fileName = path.basename(file).split('.').shift()
-                await processFile({
-                    apiKey,
-                    workflowId: workflowId,
-                    filePath: file,
-                    outputFolder: `${outputFolder}/${fileName}`,
-                    jobMonitorInterval,
-                })
-                await reportProgress(file, 'SUCCEEDED')
-            } catch (error) {
-                console.error(error)
-                await reportProgress(file, 'FAILED')
-            }
-        }
-
-        async function addToQueue(file: string) {
-            try {
-                await reportProgress(file, 'PENDING')
-                queue.add(async () => await queueListener(file))
-            } catch (error) {
-                console.error(error)
-            }
-        }
-
-        async function reportProgress(file: string, status: JobStatus) {
-            try {
-                console.log(`Progress: File ${file} -> ${status}`)
-
-                report[file] = { status }
-
-                if (onProgress) {
-                    const reportBreakdown: ReportBreakdown = {
-                        PENDING: [],
-                        PROCESSING: [],
-                        SUCCEEDED: [],
-                        FAILED: [],
-                        DELETED: [],
-                        QUEUED: [],
-                        CANCELLED: [],
-                        STARTED: [],
-                    }
-
-                    for (const filePath in report) {
-                        reportBreakdown[report[filePath].status].push(filePath)
-                    }
-
-                    await onProgress(file, status, reportBreakdown)
-                }
-            } catch (error) {
-                console.error(error)
-            }
         }
 
         const globOptions = `${inputFolder}/*.@(mp3|wav|m4a)`
         const files = await glob(globOptions, {})
 
         for (const file of files) {
-            await addToQueue(file)
+            await addToQueue(
+                apiKey,
+                workflowId,
+                queue,
+                file,
+                outputFolder,
+                jobMonitorInterval
+            )
         }
 
         await queue.onIdle()
@@ -316,16 +390,15 @@ async function waitForJobCompletion(
     apiKey: string,
     id: string,
     jobMonitorInterval = 1000
-) {
-    while (true) {
-        const job = await getJob(apiKey, id)
-        if (job.status === 'SUCCEEDED' || job.status === 'FAILED') {
-            console.log(`Progress: Job ${job} -> ${job.status}`)
-
-            return job
-        }
-        await sleep(jobMonitorInterval)
+): Promise<APICallResponse> {
+    const job = await getJob(apiKey, id)
+    if (job.status === 'SUCCEEDED' || job.status === 'FAILED') {
+        await onLogInternal(`Progress: Job ${job} -> ${job.status}`)
+        return job
     }
+
+    await sleep(jobMonitorInterval)
+    return await waitForJobCompletion(apiKey, id, jobMonitorInterval)
 }
 
 async function downloadJobResults(
@@ -362,9 +435,4 @@ async function downloadJobResults(
     await Promise.all(downloads)
 
     return downloadResult
-}
-
-export default {
-    processFolder,
-    processFile,
 }

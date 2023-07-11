@@ -59,14 +59,6 @@ export type JobStatus =
     | 'STARTED'
 
 // functions
-async function processFile({
-    apiKey,
-    workflowId,
-    filePath,
-    outputFolder,
-    jobMonitorInterval,
-}: ProcessFileOptions): Promise<DownloadResult[]>
-
 async function processFolder({
     apiKey,
     workflowId,
