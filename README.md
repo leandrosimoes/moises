@@ -16,7 +16,8 @@ or
 import { processFile, processFolder } from 'moises-node'
 
 // types
-export type ProccessStatus =
+
+export type ProcessStatus =
     | 'PENDING'
     | 'PROCESSING'
     | 'SUCCEEDED'
@@ -29,15 +30,15 @@ export type ProcessFolderOptions = {
     inputFolder: string
     outputFolder: string
     maxConcurrencyNumber?: number
-    shouldWatch?: boolean
     abortSignal?: AbortSignal
     jobMonitorInterval?: number
     onProgress?: (
         file: string,
-        status: JobStatus | ProccessStatus,
+        status: JobStatus | ProcessStatus,
         report: any
     ) => Promise<void>
-    onLog?: typeof console.log
+    onLog?(message: string): Promise<void>
+    onError?(message: string): Promise<void>
 }
 
 export type ProcessFileOptions = {
@@ -46,6 +47,13 @@ export type ProcessFileOptions = {
     filePath: string
     outputFolder: string
     jobMonitorInterval?: number
+    onProgress?: (
+        file: string,
+        status: JobStatus | ProcessStatus,
+        report: any
+    ) => Promise<void>
+    onLog?(message: string): Promise<void>
+    onError?(message: string): Promise<void>
 }
 
 export type JobStatus =
@@ -58,7 +66,22 @@ export type JobStatus =
     | 'CANCELLED'
     | 'STARTED'
 
+export type DownloadResult = {
+    [key: string]: string
+}
+
 // functions
+async function processFile({
+    apiKey,
+    workflowId,
+    filePath,
+    outputFolder,
+    jobMonitorInterval,
+    onProgress,
+    onLog,
+    onError,
+}: ProcessFileOptions) : Promise<DownloadResult>
+
 async function processFolder({
     apiKey,
     workflowId,
@@ -66,9 +89,9 @@ async function processFolder({
     outputFolder,
     maxConcurrencyNumber = 5,
     abortSignal,
-    shouldWatch,
-    jobMonitorInterval,
+    jobMonitorInterval = 1000,
     onProgress,
     onLog,
-}): : Promise<DownloadResult[]>
+    onError,
+}: ProcessFolderOptions): Promise<DownloadResult[]>
 ```

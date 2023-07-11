@@ -60,6 +60,10 @@ export type JobStatus =
     | 'CANCELLED'
     | 'STARTED'
 
+export type DownloadResult = {
+    [key: string]: string
+}
+
 type JobData = {
     id: string
     name: string
@@ -95,10 +99,6 @@ type ReportBreakdown = {
     CANCELLED: string[]
     FAILED: string[]
     STARTED: string[]
-}
-
-export type DownloadResult = {
-    [key: string]: string
 }
 
 type ApiCallOptions = {
@@ -286,7 +286,7 @@ export async function processFile({
     onProgress,
     onLog,
     onError,
-}: ProcessFileOptions) {
+}: ProcessFileOptions): Promise<DownloadResult> {
     if (!apiKey) throw new Error('API Key is required')
     if (!workflowId) throw new Error('Workflow ID is required')
 
