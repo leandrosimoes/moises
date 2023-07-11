@@ -1,4 +1,4 @@
-# ls-node-cli-template
+# moises-node
 
 Non-official [Moises AI](https://developer.moises.ai/) API wrapper package with Typescript support
 
