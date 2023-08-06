@@ -202,6 +202,7 @@ async function addJob(
 }
 
 const report: Report = {}
+const results: DownloadResult[] = []
 
 async function reportProgress(file: string, status: JobStatus) {
     try {
@@ -238,12 +239,11 @@ async function queueListener(
     jobMonitorInterval: number
 ) {
     try {
-        const fileName = path.basename(file).split('.').shift()
         await processFile({
             apiKey,
             workflowId: workflowId,
             filePath: file,
-            outputFolder: `${outputFolder}/${fileName}`,
+            outputFolder: outputFolder,
             jobMonitorInterval,
         })
     } catch (error: any) {
@@ -308,6 +308,8 @@ export async function processFile({
     )
     const result = await downloadJobResults(apiKey, jobData, outputFolder)
 
+    results.push(result)
+
     await deleteJob(apiKey, jobId)
 
     await reportProgress(filePath, 'SUCCEEDED')
@@ -327,8 +329,6 @@ export function processFolder({
     onLog,
     onError,
 }: ProcessFolderOptions): Promise<DownloadResult[]> {
-    const results: DownloadResult[] = []
-
     if (onProgress) onProgressInternal = onProgress
     if (onLog) onLogInternal = onLog
     if (onError) onErrorInternal = onError
