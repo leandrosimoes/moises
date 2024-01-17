@@ -1,6 +1,6 @@
 # moises-node
 
-Non-official [Moises AI](https://developer.moises.ai/) API wrapper package with Typescript support
+Non-official [Music AI](https://music.ai/docs/getting-started/introduction/) (Before called Moises AI) API wrapper package with Typescript support
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/3e0b2e2d5b9d4157a26d7faebe3f5a6f)](https://app.codacy.com/gh/leandrosimoes/moises/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![npm version](https://badge.fury.io/js/moises-node.svg)](https://badge.fury.io/js/moises-node)
