@@ -1,6 +1,6 @@
 {
   "name": "moises-node",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Non-official Moises AI (https://developer.moises.ai/) API wrapper package with Typescript support",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
